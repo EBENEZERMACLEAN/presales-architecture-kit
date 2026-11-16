@@ -1,0 +1,24 @@
+{
+  "$schema": "https://json.schemastore.org/claude-code-settings.json",
+  "permissions": {
+    "deny": [
+      "Read(**/.env)",
+      "Read(**/.env.*)",
+      "Read(!**/.env.example)",
+      "Read(**/*.pem)",
+      "Read(**/*.key)",
+      "Read(**/*.pfx)",
+      "Read(secrets/**)",
+      "Read(**/*.tfstate)",
+      "Read(**/*.tfstate.*)",
+      "Read(**/*.tfvars)",
+      "Read(**/.pbi/cache.abf)",
+      "Read(**/.pbi/localSettings.json)",
+      "Read(**/*.pbix)",
+      "Read(data/raw/**)",
+      "Read(data/exports/**)",
+      "Bash(git push *)",
+      "Bash(git commit *)"
+    ]
+  }
+}
