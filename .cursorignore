@@ -1,0 +1,16 @@
+# Fichiers que Cursor ne doit ni indexer ni lire (syntaxe gitignore)
+.env
+.env.*
+!.env.example
+*.pem
+*.key
+*.pfx
+secrets/
+*.tfstate
+*.tfstate.*
+*.tfvars
+**/.pbi/cache.abf
+**/.pbi/localSettings.json
+*.pbix
+data/raw/
+data/exports/
