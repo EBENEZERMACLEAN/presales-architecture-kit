@@ -1,0 +1,66 @@
+# ==== Secrets et identifiants (jamais versionnés) ====
+.env
+.env.*
+!.env.example
+*.pem
+*.key
+*.pfx
+*.p12
+*.publishsettings
+secrets/
+
+# ==== Données (régénérées par script, jamais versionnées) ====
+data/raw/
+data/staging/
+data/exports/
+*.parquet
+*.duckdb
+*.duckdb.wal
+
+# ==== Power BI (PBIP) ====
+**/.pbi/localSettings.json
+**/.pbi/cache.abf
+*.pbix
+
+# ==== Terraform ====
+.terraform/
+*.tfstate
+*.tfstate.*
+*.tfvars
+*.tfvars.json
+!*.tfvars.example
+crash.log
+crash.*.log
+override.tf
+override.tf.json
+*_override.tf
+*_override.tf.json
+.terraformrc
+terraform.rc
+# Garder .terraform.lock.hcl (versions des fournisseurs) : il est versionné
+
+# ==== dbt ====
+target/
+dbt_packages/
+logs/
+.user.yml
+
+# ==== Python ====
+__pycache__/
+*.py[cod]
+.venv/
+venv/
+.pytest_cache/
+.ruff_cache/
+.ipynb_checkpoints/
+
+# ==== Agents IA (réglages personnels) ====
+.claude/settings.local.json
+
+# ==== Système et éditeurs ====
+.DS_Store
+Thumbs.db
+desktop.ini
+.vscode/*
+!.vscode/extensions.json
+.idea/
