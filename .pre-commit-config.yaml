@@ -1,0 +1,28 @@
+# Installer : pip install pre-commit  puis  pre-commit install
+# Mettre à jour les versions : pre-commit autoupdate
+repos:
+  - repo: https://github.com/pre-commit/pre-commit-hooks
+    rev: v6.0.0
+    hooks:
+      - id: check-added-large-files
+        args: ["--maxkb=1024"]
+      - id: detect-private-key
+      - id: check-merge-conflict
+      - id: check-yaml
+      - id: check-json
+      - id: end-of-file-fixer
+        exclude: '\.(SemanticModel|Report)/'
+      - id: trailing-whitespace
+        exclude: '\.(SemanticModel|Report)/'
+  - repo: https://github.com/gitleaks/gitleaks
+    rev: v8.30.1
+    hooks:
+      - id: gitleaks
+  - repo: local
+    hooks:
+      - id: fichiers-interdits
+        name: Fichiers interdits (secrets, états Terraform, caches et PBIX Power BI, données brutes)
+        language: fail
+        entry: "Fichier interdit dans un commit : retirez-le de l'index (git rm --cached <fichier>)"
+        files: '(^|/)(\.env(\..*)?|.*\.(pem|key|pfx|pbix|tfstate|tfvars)|.*\.tfstate\..*|cache\.abf|localSettings\.json)$|(^|/)data/(raw|exports)/'
+        exclude: '(^|/)\.env\.example$'

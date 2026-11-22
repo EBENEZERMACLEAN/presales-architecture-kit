@@ -22,3 +22,5 @@ _To be completed._
 Security and data rules: `SECURITY.md`, `DATA.md`, `AGENTS.md`.
 ## License
 MIT — see `LICENSE`.
+
+**AI assistance:** AI used for setup steps and file templates; every file reviewed and committed by me.
