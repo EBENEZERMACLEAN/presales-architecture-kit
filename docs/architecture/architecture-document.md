@@ -8,7 +8,7 @@
 | Version | 0.1 |
 | Client | Client Démo (fictitious) |
 | Author | Ebenezer MACLEAN |
-| Last updated | 2026-11-24 |
+| Last updated | 2026-11-25 |
 | Decision makers | CIO, Head of Analytics |
 | Templates | arc42 (lightweight) · C4 model · Azure Well-Architected Framework |
 
@@ -40,7 +40,7 @@
 | Privacy officer | Keep loyalty data compliant with Law 25 and be alerted of any exposure | 3 |
 | Analysts | Query sales history, including loyalty data, for analysis | 3, 5 |
 | Store managers | See results from the previous day on their mobile phone before opening | 1, 2, 4 |
-| Replenishment team | See the previous day's stock levels by store and product, to reorder before stock-outs | 1, 2 |
+| Replenishment team | Review the previous day's stock levels and open purchase orders by store and product to prevent stock-outs | 1, 2 |
 | Data team – implementation | Clear requirements and architecture decisions to build the pipelines, model and reports | 1, 2, 3, 4, 5 |
 | Data team – operations | Run and monitor the nightly load, capacity usage and access logs, and be alerted when something fails | 1, 3, 6 |
 | Budget owner | Keep the platform within the approved Fabric budget | 6 |
@@ -63,29 +63,29 @@
 title: "System context (C4 level 1) — Analytics platform — Client Démo (fictitious) — v0.1"
 ---
 flowchart LR
-  manager["Store manager<br/>[Person]<br/>Checks sales from the day before and stock-outs"]
-  director["Director<br/>[Person]<br/>Compares sales trends and replenishment efficiency year over year"]
-  replenishment["Replenishment team<br/>[Person]<br/>Sees stock levels from the day before by store and product to reorder before stock-outs"]
-  analyst["Analyst<br/>[Person]<br/>Queries curated sales and stock history, including loyalty data, for analysis"]
-  dataops["Data team – operations<br/>[Person]<br/>Runs and monitors the nightly load"]
+  manager["<b>Store manager</b><br/>[Person]<br/>Checks the previous day's<br/>sales and stock-outs"]
+  director["<b>Director</b><br/>[Person]<br/>Compares sales trends and<br/>replenishment efficiency<br/>year over year"]
+  replenishment["<b>Replenishment team</b><br/>[Person]<br/>Reviews the previous day's<br/>stock levels and open purchase<br/>orders by store and product<br/>to prevent stock-outs"]
+  analyst["<b>Analyst</b><br/>[Person]<br/>Queries curated sales and<br/>stock history, including<br/>loyalty data, for analysis"]
+  dataops["<b>Data team – operations</b><br/>[Person]<br/>Runs and monitors<br/>the nightly load"]
   subgraph scope["Scope: analytics platform"]
-    platform["Analytics platform<br/>[Software system]<br/>Integrates sales, stock and loyalty data, serves reports"]
+    platform["<b>Analytics platform</b><br/>[Software system]<br/>Integrates sales, stock and<br/>loyalty data, serves reports"]
   end
-  pos["Point-of-sale system<br/>[External software system]<br/>Records every in-store checkout"]
-  erp["ERP (purchasing and stock)<br/>[External software system]<br/>Manages purchasing and stock levels, on premises"]
-  ols["Online store<br/>[External software system]<br/>Records every online checkout"]
-  crm["CRM (loyalty program)<br/>[External software system]<br/>Manages loyalty members and their personal information"]
-  xlsx["Marketing promotions file<br/>[External file]<br/>Lists every marketing promotion"]
-  manager -- "Views daily sales report<br/>[HTTPS]" --> platform
-  director -- "Views weekly sales report<br/>[HTTPS]" --> platform
-  replenishment -- "Views daily stock report<br/>[HTTPS]" --> platform
-  analyst -- "Queries curated sales and stock history<br/>[SQL]" --> platform
-  platform -- "Sends load failure and delay alerts<br/>[Email]" --> dataops
-  platform -- "Pulls daily sales export<br/>[SFTP, CSV]" --> pos
-  platform -- "Pulls daily purchasing and stock data<br/>[SQL]" --> erp
-  platform -- "Pulls daily online sales export<br/>[REST API]" --> ols
+  pos["<b>Point-of-sale system</b><br/>[External software system]<br/>Records every<br/>in-store checkout"]
+  erp["<b>ERP (purchasing and stock)</b><br/>[External software system]<br/>Manages purchasing and<br/>stock levels, on premises"]
+  ols["<b>Online store</b><br/>[External software system]<br/>Records every<br/>online checkout"]
+  crm["<b>CRM (loyalty program)</b><br/>[External software system]<br/>Manages loyalty members and<br/>their personal information"]
+  xlsx["<b>Marketing promotions file</b><br/>[External file]<br/>Lists every<br/>marketing promotion"]
+  manager -- "Views daily<br/>sales report<br/>[HTTPS]" --> platform
+  director -- "Views weekly<br/>sales report<br/>[HTTPS]" --> platform
+  replenishment -- "Views daily stock and<br/>purchasing report<br/>[HTTPS]" --> platform
+  analyst -- "Queries curated sales<br/>and stock history<br/>[SQL]" --> platform
+  platform -- "Sends load failure<br/>and delay alerts<br/>[Email]" --> dataops
+  platform -- "Pulls daily<br/>sales export<br/>[SFTP, CSV]" --> pos
+  platform -- "Pulls daily purchasing<br/>and stock data<br/>[SQL]" --> erp
+  platform -- "Pulls daily online<br/>sales export<br/>[REST API]" --> ols
   platform -- "Pulls loyalty members<br/>[Protocol to confirm]" --> crm
-  platform -- "Pulls marketing promotions when the file is updated<br/>[XLSX on SharePoint]" --> xlsx
+  platform -- "Pulls marketing promotions<br/>when the file is updated<br/>[XLSX on SharePoint]" --> xlsx
   classDef person fill:#08427b,color:#ffffff,stroke:#052e56
   classDef system fill:#1168bd,color:#ffffff,stroke:#0b4884
   classDef external fill:#999999,color:#ffffff,stroke:#6b6b6b
@@ -101,12 +101,102 @@ Assumptions: loyalty member data comes from an existing CRM (access protocol to 
 ## 4. Solution strategy
 
 ### Architecture principles
+#### P1 — One definition per KPI (Single source of truth)
+**Statement:** Every business KPI has one business definition and one calculation, reused by every consumer.<br>
+**Rationale:** Store reports, analysts and the future forecasting model must show the same numbers. A team of three can maintain each rule in one place only.<br>
+**Implications:**
+- A new KPI starts with its business definition in the glossary.
+- Its calculation lives in a single shared layer, never duplicated in reports or notebooks.
 
-<!-- Three principles. Each one: Statement, Rationale, Implications. -->
+#### P2 — Least privilege
+**Statement:** Users and services can only access the data their tasks require.<br>
+**Rationale:** Law 25 requires that personal information be accessible only to those who need it for their duties (Section 2). Limiting access also contains the damage if an account or service is compromised. For example, analysts see loyalty behaviour, not member identities (Q7).<br>
+**Implications:**
+- Access is granted by role, through groups managed by the client, never to individual accounts.
+- Direct identifiers are hidden from roles that do not need them. Hidden identifiers do not make data anonymous.
+- Services run under dedicated identities with only the permissions they need.
+
+#### P3 — Decisions rely on certified data
+**Statement:** Reports used for decision-making draw only on data that has been certified by its owner.<br>
+**Rationale:** Decision-makers must trust the figures they use. Certification makes clear which data is reliable and who is accountable for it.<br>
+**Implications:**
+- Each certified dataset has a named data owner.
+- Certification follows explicit criteria (quality checks, documentation, validated definitions).
+- Uncertified data stays available for exploration but is clearly labelled as such.
 
 ## 5. Building block view
 
-<!-- C4 level 2 (containers) diagram, its legend, then one table row per container. -->
+~~~mermaid
+---
+title: "Containers (C4 level 2) — Analytics platform — Client Démo (fictitious) — v0.1"
+---
+flowchart LR
+  manager["Store manager<br/>[Person]"]
+  director["Director<br/>[Person]"]
+  replenishment["Replenishment team<br/>[Person]"]
+  analyst["Analyst<br/>[Person]"]
+  dataops["Data team – operations<br/>[Person]"]
+
+  pos["Point-of-sale system<br/>[External software system]"]
+  ols["Online store<br/>[External software system]"]
+  crm["CRM (loyalty program)<br/>[External software system]"]
+  xlsx["Marketing promotions file<br/>[External file on SharePoint]"]
+
+  subgraph onprem["Client network (on-premises)"]
+    gateway["On-premises data gateway<br/>[Infrastructure, operated by client IT]"]
+    erp["ERP (purchasing and stock)<br/>[External software system, SQL Server]"]
+  end
+
+  subgraph platform["Analytics platform (Microsoft Fabric)"]
+    pipeline["Ingestion pipelines<br/>[Container: Fabric Data Factory pipeline]<br/>Copies source data every night"]
+    bronze["Raw data store<br/>[Container: Fabric Lakehouse, Delta tables]<br/>Keeps source data as received"]
+    transform["Transformations<br/>[Container: T-SQL stored procedures]<br/>Cleans, conforms and models data"]
+    silver["Cleaned data store<br/>[Container: Fabric Data Warehouse, silver schema]<br/>Deduplicated, standardized, validated data"]
+    gold["Curated data store<br/>[Container: Fabric Data Warehouse, gold schema]<br/>Star schema for end-user consumption"]
+    semantic["Semantic model<br/>[Container: Power BI semantic model, Direct Lake]<br/>Single definition of every KPI"]
+    reports["Reports and app<br/>[Container: Power BI report and app]<br/>Daily store report, weekly executive view, stock-outs"]
+  end
+
+  pipeline -- "Reads daily export<br/>[SFTP, CSV]" --> pos
+  pipeline -- "Reads purchasing and stock<br/>[Gateway connection]" --> gateway
+  gateway -- "Queries<br/>[SQL]" --> erp
+  pipeline -- "Reads online orders<br/>[REST API]" --> ols
+  pipeline -- "Reads loyalty members<br/>[Protocol to confirm]" --> crm
+  pipeline -- "Reads promotions<br/>[SharePoint, XLSX]" --> xlsx
+  pipeline -- "Writes raw tables<br/>[OneLake, Delta]" --> bronze
+  pipeline -- "Runs after ingestion" --> transform
+  transform -- "Reads raw tables<br/>[SQL endpoint, T-SQL]" --> bronze
+  transform -- "Writes cleaned tables<br/>[T-SQL]" --> silver
+  transform -- "Writes curated tables<br/>[T-SQL]" --> gold
+  semantic -- "Reads curated tables<br/>[Direct Lake]" --> gold
+  reports -- "Reads KPIs<br/>[DAX]" --> semantic
+  manager -- "Views daily report, often on mobile<br/>[HTTPS]" --> reports
+  director -- "Views weekly review<br/>[HTTPS]" --> reports
+  replenishment -- "Views stock-outs<br/>[HTTPS]" --> reports
+  analyst -- "Explores data<br/>[SQL endpoint, TDS]" --> gold
+  pipeline -- "Sends load failure<br/>and delay alerts<br/>[Email]" --> dataops
+
+  classDef person fill:#08427b,color:#ffffff,stroke:#052e56
+  classDef container fill:#438dd5,color:#ffffff,stroke:#2e6295
+  classDef external fill:#999999,color:#ffffff,stroke:#6b6b6b
+  classDef infra fill:#ffffff,color:#333333,stroke:#6b6b6b,stroke-dasharray:4 2
+  class manager,director,replenishment,analyst,dataops person
+  class pipeline,bronze,transform,silver,gold,semantic,reports container
+  class pos,ols,crm,xlsx,erp external
+  class gateway infra
+~~~
+
+Legend: dark blue = person · blue = container inside the platform · grey = external system · dashed white = infrastructure operated by client IT · arrow = from the initiator to the dependency, label = intent [protocol].
+
+| Container | Technology | Responsibility | Data classification |
+|---|---|---|---|
+| Ingestion pipelines | Fabric Data Factory pipeline | Copies the five sources every night, runs the transformations, sends alerts | Restricted |
+| Raw data store | Fabric Lakehouse, Delta tables | Keeps source data as received, with 3 years of history | Restricted |
+| Transformations | T-SQL stored procedures | Deduplicates, standardizes and validates data, then builds the star schema | Restricted |
+| Cleaned data store | Fabric Data Warehouse, silver schema | Holds validated, conformed data | Restricted |
+| Curated data store | Fabric Data Warehouse, gold schema | Star schema; members' direct identifiers excluded (P2) | Confidential |
+| Semantic model | Power BI semantic model, Direct Lake | Single definition of every KPI (P1) | Confidential |
+| Reports and app | Power BI report and app | Daily store report before opening, weekly executive view, stock-outs | Confidential |
 
 ## 6. Runtime view
 
